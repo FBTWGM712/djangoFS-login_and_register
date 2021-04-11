@@ -1,0 +1,154 @@
+source my_environments/django3Env/Scripts/Activate
+
+django-admin startproject login_and_register
+
+mkdir -p apps/loginapp
+
+python manage.py startapp loginapp ./apps/loginapp
+
+setings.py:
+    INSTALLED_APPS = [
+    'apps.loginapp',
+
+urls.py:
+    from django.contrib import admin
+    from django.urls import path
+
+    urlpatterns = [
+        path('admin/', admin.site.urls),
+        path('', include('apps.loginapp.urls')),
+    ]
+
+apps.urls.py:
+    from django.urls import path
+    from . import views
+
+    urlpatterns = [
+        path('', views.index),
+    ]
+
+apps.views.py
+    from django.shortcuts import render, redirect
+
+    # Create your views here.
+    def index(request):
+        return render(request, 'loginapp/index.html')
+
+El registro debe cumplir con las siguientes pautas:
+
+    -Primer nombre (requerido; al menos 2 caracteres; solo letras
+    -Apellido Necesario; al menos 2 caracteres; solo letras
+    -Correo electronico (requerido; formato válido
+    -Se requiere contraseña; Al menos 8 carácteres; coincide con la confirmación de contraseña
+
+** consideraciones para el email: 
+    -En login User.objects.get (correo electrónico = correo electrónico) para validar que existe (considerar try y except para el error de que no exista)
+    -En registro User.objects.filter (correo electrónico = correo electrónico) para validar que no ha sido usado y creado
+
+apps.models.py:
+    from django.db import models
+
+    # Create your models here.
+    class User(models.Model):
+        first_name = models.CharField(max_length=200)
+        last_name = models.CharField(max_length=200)
+        email = models.CharField(max_length=200)
+        password = models.CharField(max_length=200)
+        created_at = models.DateTimeField(auto_now_add=True)
+        updated_at = models.DateTimeField(auto_now=True)
+
+        def __repr__(self):
+            return "<User object: {} {}, {}>".format(
+                self.first_name, self.last_name, self.email)
+
+HTML 5: considerar:
+    {% load staticfiles %} para css en link; para archivo usar: <link rel="stylesheet" href="{% static 'users/css/style.css' %}">
+    {% csrf_token %} para login y register
+    
+    Crearemos 2 forms: podemos crear los dos donde ambos tengan la misma action y definir valores separados para procesarlos
+        ftype = request.POST['type']
+        if (ftype == 'register')
+
+        y en html 
+        <form action='/process' method='POST'>
+                    {% csrf_token %}
+                    <input type="hidden" name="type" value="login">
+    
+    usaremos la segunda opcion que seria una "action" definida para cada uno por separado (register, login).
+            <form action='/registration' method='post'>
+
+            <form action='/login' method='post'>
+        Usar en register: name, alias, email, password, confirm, dob y submit
+        Usar en login: alias, password, submit
+
+Vamos a completar el manager en models.py **debe estar antes de User
+    class UserManager(models.Manager):
+        pass
+
+Segun los valores de form:
+    class UserManager(models.Manager):
+        def basic_validator(self, postData):
+            errors = {}
+            print(postData)
+            if len(postData['name']) < 2:
+                errors['name'] = "needs to be longer than 2 characters"
+            if len(postData['alias']) < 2:
+                errors['alias'] = "needs to be longer than 2 characters"
+
+            return errors
+
+Para el email usar la expresion regular:
+    import re
+        email_regex =  re.compile(r'^[a-zA-Z0-9.+_-]+@[a-zA-Z0-9._-]+\.[a-zA-Z]+$')
+         
+        if not email_regex.match(postData['email']):
+            errors['email']="Email must be a valid format"
+** otros regex:
+    str.isalpha ()  : devuelve un valor booleano que muestra si una cadena contiene solo caracteres alfabéticos
+    otros métodos de cadena
+    time.strptime (cadena, formato)  : cambia una cadena a una hora usando el formato dado
+
+Hacer para password:
+        if len(postData['password'])<8:
+            errors['password']= "Password must be at least 8 character"
+        if postData['password'] != postData['confirm']:
+            errors['confirm']= "Password and Confirm must match"
+
+Por ultimo no olvidar agregar el objects =UserManager() en la clase User y return errors en manager
+
+
+Volver a apps.loginapp.urls.py para poner estas acciones:
+    from django.urls import path
+    from . import views
+
+    urlpatterns = [
+        path('', views.index),
+        path('registration', views.register),
+        path('login', views.login),
+    ]
+
+Completar en apps.loginapp.views.py
+def register(request):
+    pass
+
+Ademas agregamos las validaciones
+-html: 
+    {% if messages %}
+      <ul class="messages">
+        {% for message in messages %}
+        <li {% if message.tags %} class="{{message.tags}}" {% endif %}>{{message}}</li>
+        {% endfor %}
+      </ul>
+    {% endif %}
+
+-views.py:
+from django.contrib import messages
+from .models import *
+
+def register(request):
+
+Antes de probar ejecutamos las migraciones
+    python manage.py makemigrations
+
+    python manage.py migrate
+
